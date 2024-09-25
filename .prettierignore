@@ -1,0 +1,10 @@
+**/.git
+**/node_modules
+
+build
+coverage
+
+.next
+next-env.d.ts
+
+postcss.config.mjs

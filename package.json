@@ -2,9 +2,11 @@
     "name": "gtfs",
     "version": "1.0.0",
     "main": "index.js",
+    "type": "module",
     "scripts": {
         "tsnode": "node --loader ts-node/esm --no-warnings=ExperimentalWarning",
-        "start": "npm run tsnode ./index.ts"
+        "start": "npm run tsnode src/index.ts",
+        "gtfsrt": "rm data/gtfsrt.json && gtfs-realtime -o=\"data/gtfsrt.json\" https://realtime.hsl.fi/realtime/trip-updates/v2/hsl"
     },
     "author": "",
     "license": "ISC",
@@ -13,11 +15,14 @@
         "@types/node": "^22.7.2",
         "@typescript-eslint/eslint-plugin": "^8.7.0",
         "@typescript-eslint/parser": "^8.7.0",
+        "csv-parse": "^5.5.6",
         "eslint": "^8.57.1",
         "eslint-config-prettier": "^9.1.0",
         "eslint-plugin-import": "^2.30.0",
+        "gtfs-realtime": "^0.4.0",
         "prettier": "^3.3.3",
         "ts-node": "^10.9.2",
+        "tslib": "^2.7.0",
         "typescript": "^5.6.2"
     }
 }

@@ -4,10 +4,16 @@ import path from 'node:path'
 import { finished } from 'node:stream/promises'
 import { endTimer, startTimer } from '../timers'
 
-export const loadCalendarExceptions = async (serviceIds: Set<string>) => {
+export const loadCalendarExceptions = async (
+    serviceIds: Set<string>,
+    date: Date
+) => {
     startTimer('loadCalendarExceptions')
 
-    const now = new Date()
+    const dateStamp =
+        date.getFullYear().toString() +
+        (date.getMonth() + 1).toString().padStart(2, '0') +
+        date.getDate().toString().padStart(2, '0')
 
     const parser = createReadStream(
         path.join('data', 'calendar_dates.txt')
@@ -16,10 +22,7 @@ export const loadCalendarExceptions = async (serviceIds: Set<string>) => {
     parser.on('readable', () => {
         let record
         while ((record = parser.read() as string[]) !== null) {
-            if (
-                now.toISOString().split('T')[0]?.split('-').join('') ===
-                record[1]
-            ) {
+            if (dateStamp === record[1]) {
                 if (record[2] === '1') {
                     console.log('Adding service exception:', record[0])
                     serviceIds.add(record[0]!)

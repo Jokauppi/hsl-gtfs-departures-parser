@@ -1,43 +1,5 @@
-import { readFile, writeFile } from 'fs/promises'
 import { createInterface } from 'readline/promises'
-import { loadCalendar } from './load/calendar'
-import { loadCalendarExceptions } from './load/calendar_dates'
-import { loadRoutes } from './load/routes'
-import { loadStopTimes } from './load/stop_times'
-import { loadTrips } from './load/trips'
-import { loadVehicleTypes } from './load/vehicle_types'
-import { endTimer, startTimer } from './timers'
-
-const departures = await readFile('data/departures.json', 'utf8')
-    .then((departures) => {
-        console.log('Found departures from file')
-
-        return JSON.parse(departures) as string[][]
-    })
-    .catch(async () => {
-        console.log('Error getting departures from file')
-
-        const stop_times = await loadCalendar()
-            .then((serviceIds) => loadCalendarExceptions(serviceIds))
-            .then((serviceIds) => loadTrips(serviceIds))
-            .then(async (trips) =>
-                loadStopTimes(
-                    trips,
-                    await loadRoutes(),
-                    await loadVehicleTypes()
-                )
-            )
-            .then((departures) =>
-                departures.sort((a, b) => a[3]!.localeCompare(b[3]!))
-            )
-
-        const departuresJSON = JSON.stringify(stop_times, null, 2)
-        await writeFile('data/departures.json', departuresJSON, 'utf8')
-
-        return stop_times
-    })
-
-console.log('Departures in 24h:', Array.from(departures).length)
+import { getNextDepartures } from './queries/departures'
 
 const rl = createInterface({
     input: process.stdin,
@@ -45,22 +7,30 @@ const rl = createInterface({
 })
 
 function loop() {
-    startTimer('nextDepartures')
+    const nextDepartures = getNextDepartures()
 
-    console.log(
-        departures.filter((departure) => {
-            const time = departure[3]!.split(':')
-            const departureDateTime = new Date()
-            departureDateTime.setHours(parseInt(time[0]!))
-            departureDateTime.setMinutes(parseInt(time[1]!))
-            return (
-                departureDateTime.valueOf() - Date.now() > 4 * 60 * 1000 &&
-                departureDateTime.valueOf() - Date.now() < 30 * 60 * 1000
+    nextDepartures.forEach((departure) =>
+        // Print the departure information with colors
+        {
+            const route = `\x1b[${departure.vehicleType === 'tram' ? '30;42' : '37;44'}m ${departure.route} ${' '.repeat(4 - (departure.route?.length ?? 0))}`
+            const headsign = `\x1b[30;47m   ${departure.headsign} ${' '.repeat(15 - (departure.headsign?.length ?? 0))}`
+            const minutesToDeparture =
+                departure.minutesToDeparture < 59
+                    ? `~${departure.minutesToDeparture} min${' '.repeat(3 - departure.minutesToDeparture?.toString().length)}`
+                    : ' '.repeat(8)
+            const departureTime = new Date(departure.time)
+                .toLocaleTimeString('fi', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                })
+                .replace('.', ':')
+            const stopId = ` ${departure.stopId} `
+
+            console.log(
+                `${route}${headsign}${minutesToDeparture}${departureTime} \x1b[0m${stopId}`
             )
-        })
+        }
     )
-
-    endTimer('nextDepartures')
 
     console.log('Press Enter to show next departures, or Ctrl+C to exit.')
 

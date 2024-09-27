@@ -5,11 +5,10 @@ import { finished } from 'node:stream/promises'
 import { endTimer, startTimer } from '../timers'
 import { dateFromYYYYMMDD } from '../utils'
 
-export const loadCalendar = async () => {
+export const loadCalendar = async (date: Date) => {
     startTimer('loadCalendar')
 
-    const now = new Date()
-    const currentDayOfWeek = ((now.getDay() + 6) % 7) + 1
+    const currentDayOfWeek = ((date.getDay() + 6) % 7) + 1
 
     const serviceIds = new Set<string>()
 
@@ -23,8 +22,8 @@ export const loadCalendar = async () => {
         while ((record = parser.read() as string[]) !== null) {
             if (
                 record[currentDayOfWeek] === '1' &&
-                now >= dateFromYYYYMMDD(record[8] ?? '30000101') &&
-                now <= dateFromYYYYMMDD(record[9] ?? '19700101')
+                date >= dateFromYYYYMMDD(record[8] ?? '30000101') &&
+                date <= dateFromYYYYMMDD(record[9] ?? '19700101')
             ) {
                 serviceIds.add(record[0]!)
             }

@@ -1,3 +1,14 @@
+const second = 1000
+const minute = 60 * second
+const hour = 60 * minute
+const day = 24 * hour
+
+export const dayOffset = 0 * day
+export const timeOffset = 0 * hour
+
+export const gtfs_rt_url =
+    'https://infopalvelut.storage.hsldev.com/gtfs/hsl.zip'
+
 export const stopsToInclude = new Set([
     '1240134', // A.I. Virtasen aukio (N)
     '1240133', // A.I. Virtasen aukio (S)
@@ -12,9 +23,10 @@ export const stopsToInclude = new Set([
     '1240102', // Kyläsaarenkatu (S)
 ])
 
-export const excludeRoutesFromStop = {
+export const excludeRoutesFromStop: Record<string, string[]> = {
     '1230112': ['1053', '1506'],
     '1230109': ['1506'],
     '1240103': ['1056'],
     '1240118': ['1056'],
+    '1240102': ['1055'],
 }

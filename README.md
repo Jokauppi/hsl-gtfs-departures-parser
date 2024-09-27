@@ -4,7 +4,7 @@ Terminal application using HSL's [open GTFS APIs](https://www.hsl.fi/en/hsl/open
 
 This project is meant as a testing ground to create logic for node.js endpoints supplying data to a public transport timetable display.
 
-## Installation && Usage
+## Installation & Usage
 
 ```bash
 git clone https://github.com/Jokauppi/hsl-gtfs-departures-parser.git

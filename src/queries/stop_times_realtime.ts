@@ -1,15 +1,17 @@
 import GtfsRTBindings from 'gtfs-realtime-bindings'
-import { gtfs_rt_url } from '../config'
+import { excludeRoutesFromStop, gtfs_rt_url, stopsToInclude } from '../config'
 import { endTimer, startTimer } from '../timers'
+import { headsigns } from './headsigns'
+import { routes } from './routes'
 import { type Departure } from './types'
+import { vehicleTypes } from './vehicle_types'
 
-const getStopTimesRealtime = async (
-    routes: Map<string, string>,
-    vehicleTypes: Map<string, string>
-): Promise<Departure[]> => {
+export const loadStopTimesRealtime = async (): Promise<Departure[]> => {
     startTimer('loadStopTimesRealtime')
 
-    const stop_times = await fetch(gtfs_rt_url)
+    const departures: Departure[] = []
+
+    await fetch(gtfs_rt_url)
         .then((response) => response.arrayBuffer())
         .then((buffer) =>
             GtfsRTBindings.transit_realtime.FeedMessage.decode(
@@ -17,23 +19,40 @@ const getStopTimesRealtime = async (
             )
         )
         .then((feed) =>
-            feed.entity
-                .map(({ tripUpdate }) => {
-                    if (!tripUpdate?.trip.routeId) return undefined
+            feed.entity.forEach(({ tripUpdate }) => {
+                const stop = tripUpdate?.stopTimeUpdate?.find(
+                    ({ departure, stopId }) =>
+                        departure?.uncertainty !== 0 &&
+                        stopId &&
+                        stopsToInclude.has(stopId) &&
+                        !excludeRoutesFromStop[stopId]?.includes(
+                            tripUpdate.trip.routeId ?? ''
+                        ) &&
+                        departure?.time &&
+                        departure?.time * 1000 > Date.now()
+                )
 
-                    return {
-                        route: routes.get(tripUpdate.trip.routeId),
-                        vehicleType:
-                            vehicleTypes.get(tripUpdate.trip.routeId) ?? 'bus',
-                        routeId: tripUpdate.trip.routeId,
-                        stopId: tripUpdate.stopTimeUpdate[0].stopId,
+                const routeId = tripUpdate?.trip.routeId
+                const stopId = stop?.stopId
+                const time = stop?.departure?.time
+                const route = routes.get(routeId ?? '')
+                const vehicleType = vehicleTypes.get(routeId ?? '')
+
+                if (stopId && time && routeId && route && vehicleType) {
+                    departures.push({
+                        routeId,
+                        route,
+                        vehicleType,
+                        headsign: headsigns[routeId] ?? '',
+                        stopId,
+                        time: time * 1000,
                         realtime: true,
-                    }
-                })
-                .filter((departure) => departure !== undefined)
+                    })
+                }
+            })
         )
 
     endTimer('loadStopTimesRealtime')
 
-    return stop_times
+    return departures
 }

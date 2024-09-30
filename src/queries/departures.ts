@@ -2,11 +2,10 @@ import { readFile, writeFile } from 'fs/promises'
 import { dayOffset, timeOffset } from '../config'
 import { loadCalendar } from './calendar'
 import { loadCalendarExceptions } from './calendar_dates'
-import { loadRoutes } from './routes'
 import { loadStopTimes } from './stop_times'
+import { loadStopTimesRealtime } from './stop_times_realtime'
 import { loadTrips } from './trips'
 import { type Departure } from './types'
-import { loadVehicleTypes } from './vehicle_types'
 
 export const getDepartures = async (): Promise<
     (Omit<Departure, 'time'> & { time: Date })[]
@@ -25,14 +24,7 @@ export const getDepartures = async (): Promise<
             const departures = await loadCalendar(date)
                 .then((serviceIds) => loadCalendarExceptions(serviceIds, date))
                 .then((serviceIds) => loadTrips(serviceIds))
-                .then(async (trips) =>
-                    loadStopTimes(
-                        trips,
-                        await loadRoutes(),
-                        await loadVehicleTypes(),
-                        date
-                    )
-                )
+                .then(async (trips) => loadStopTimes(trips, date))
                 .then((departures) =>
                     departures.sort((a, b) => a.time - b.time)
                 )
@@ -52,33 +44,43 @@ export const getDepartures = async (): Promise<
 
 const departures = await getDepartures()
 
-export const getNextDepartures = () => {
-    const includedRoutes = new Set<string>()
-    return (
+export const getNextDepartures = async () => {
+    const realtime = await loadStopTimesRealtime().then((departures) =>
         departures
-            // Filter departures that are between 4 and 30 minutes away
-            .filter(
-                (departure) =>
-                    departure.time.valueOf() - (Date.now() + timeOffset) >
-                        4 * 60 * 1000 &&
-                    departure.time.valueOf() - (Date.now() + timeOffset) <
-                        6 * 60 * 60 * 1000
-            )
             .map((departure) => ({
                 ...departure,
-                minutesToDeparture: Math.floor(
-                    (departure.time.valueOf() - (Date.now() + timeOffset)) /
-                        60000
-                ),
+                time: new Date(departure.time),
             }))
-            .filter((departure) => {
-                // Keep track of included departures to only show the earliest one for each route
-                if (
-                    includedRoutes.has(`${departure.route} ${departure.stopId}`)
-                )
-                    return false
-                includedRoutes.add(`${departure.route} ${departure.stopId}`)
-                return true
-            })
+            .sort((a, b) => a.time.valueOf() - b.time.valueOf())
     )
+
+    const scheduled = departures
+        // Filter departures that are between 4 and 30 minutes away
+        .filter(
+            (departure) =>
+                departure.time.valueOf() - (Date.now() + timeOffset) >
+                    4 * 60 * 1000 &&
+                departure.time.valueOf() - (Date.now() + timeOffset) <
+                    6 * 60 * 60 * 1000
+        )
+        .sort((a, b) => a.time.valueOf() - b.time.valueOf())
+
+    const includedRoutes = new Set<string>()
+
+    return realtime
+        .concat(scheduled)
+        .filter((departure) => {
+            // Keep track of included departures to only show the earliest one for each route
+            if (includedRoutes.has(`${departure.routeId}_${departure.stopId}`))
+                return false
+            includedRoutes.add(`${departure.routeId}_${departure.stopId}`)
+            return true
+        })
+        .map((departure) => ({
+            ...departure,
+            minutesToDeparture: Math.floor(
+                (departure.time.valueOf() - (Date.now() + timeOffset)) / 60000
+            ),
+        }))
+        .sort((a, b) => a.time.valueOf() - b.time.valueOf())
 }

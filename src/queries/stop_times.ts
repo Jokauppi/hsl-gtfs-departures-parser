@@ -4,12 +4,12 @@ import path from 'node:path'
 import { finished } from 'node:stream/promises'
 import { dayOffset, excludeRoutesFromStop, stopsToInclude } from '../config'
 import { endTimer, startTimer } from '../timers'
+import { routes } from './routes'
 import { type Departure } from './types'
+import { vehicleTypes } from './vehicle_types'
 
 export const loadStopTimes = async (
     trips: Map<string, string[]>,
-    routes: Map<string, string>,
-    vehicleTypes: Map<string, string>,
     date: Date
 ): Promise<Departure[]> => {
     startTimer('loadStopTimes')

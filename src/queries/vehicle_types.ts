@@ -4,7 +4,7 @@ import path from 'node:path'
 import { finished } from 'node:stream/promises'
 import { endTimer, startTimer } from '../timers'
 
-export const loadVehicleTypes = async () => {
+const loadVehicleTypes = async () => {
     startTimer('loadVehicleTypes')
 
     const vehicleTypes = new Map<string, string>()
@@ -27,3 +27,5 @@ export const loadVehicleTypes = async () => {
 
     return vehicleTypes
 }
+
+export const vehicleTypes = await loadVehicleTypes()
